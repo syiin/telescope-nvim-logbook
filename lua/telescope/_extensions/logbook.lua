@@ -11,16 +11,46 @@ local logbook_config = {
 	default_path = "~/logbook",
 	file_extension = ".md",
 }
-local ok, logbook = pcall(require, "logbook.config")
-if ok then
-	logbook_config = logbook.options
-end
 
 local M = {}
 
 -- Helper function to ensure path is expanded
+local function normalize_path(path)
+	-- If path starts with ~, expand it
+	if path:match("^~") then
+		path = vim.fn.expand(path)
+	end
+
+	-- Remove any trailing slashes
+	path = path:gsub("/$", "")
+
+	-- Convert to absolute path
+	if not path:match("^/") then
+		path = vim.fn.fnamemodify(path, ":p")
+	end
+
+	return path
+end
+
+-- Extension configuration
+local config = {
+	default_path = normalize_path("~/logbook"),
+	file_extension = ".md",
+}
+
+-- Try to load logbook configuration if available
+local ok, logbook = pcall(require, "logbook.config")
+if ok then
+	-- If logbook plugin is available, use its normalized path
+	config = vim.tbl_deep_extend("force", config, logbook.options)
+else
+	-- If path was provided directly to telescope extension, normalize it
+	config.default_path = normalize_path(config.default_path)
+end
+
+-- Helper function to ensure path is expanded
 local function get_logbook_path()
-	return vim.fn.expand(logbook_config.default_path)
+	return config.default_path -- Already normalized
 end
 
 -- Search through logbook content
